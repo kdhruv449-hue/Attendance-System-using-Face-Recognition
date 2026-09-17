@@ -2,96 +2,22 @@ import cv2
 import numpy as np
 import face_recognition
 import os
-from datetime import datetime
 
-
-# ==============================
-# 1. PROJECT PATHS
-# ==============================
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-training_path = os.path.join(BASE_DIR, "Training_Images")
-attendance_file = os.path.join(BASE_DIR, "Attendance.csv")
-
-
-# Create Training_Images folder if it doesn't exist
-if not os.path.exists(training_path):
-    os.makedirs(training_path)
-    print("Created Training_Images folder.")
-    print("Please add face images and restart the program.")
-    exit()
-
-
-# ==============================
-# 2. LOAD TRAINING IMAGES
-# ==============================
-
+# 1. Path to your images
+path = 'Training_Images'
 images = []
 classNames = []
+myList = os.listdir(path)
 
-myList = os.listdir(training_path)
+# 2. Automatically get names from filenames
+for cl in myList:
+    curImg = cv2.imread(f'{path}/{cl}')
+    images.append(curImg)
+    classNames.append(os.path.splitext(cl)[0])
 
-for filename in myList:
+print(f"Found these people: {classNames}")
 
-    file_path = os.path.join(training_path, filename)
-
-    # Read image
-    curImg = cv2.imread(file_path)
-
-    if curImg is not None:
-        images.append(curImg)
-        classNames.append(os.path.splitext(filename)[0])
-
-
-print(f"Found these people in database: {classNames}")
-
-
-# ==============================
-# 3. MARK ATTENDANCE
-# ==============================
-
-def mark_attendance(name):
-
-    with open(attendance_file, "a+", newline="") as f:
-
-        f.seek(0)
-        my_data_list = f.readlines()
-
-        now = datetime.now()
-
-        date_string = now.strftime("%d-%m-%Y")
-        time_string = now.strftime("%H:%M:%S")
-
-        attendance_records = []
-
-        for line in my_data_list:
-
-            entry = line.strip().split(",")
-
-            if len(entry) >= 3:
-
-                attendance_records.append(
-                    f"{entry[0]}-{entry[2]}"
-                )
-
-        current_entry_check = f"{name}-{date_string}"
-
-        if current_entry_check not in attendance_records:
-
-            f.write(
-                f"{name},{time_string},{date_string}\n"
-            )
-
-            print(
-                f"✅ Attendance logged for {name} on {date_string}"
-            )
-
-
-# ==============================
-# 4. FACE ENCODING
-# ==============================
-
+# 3. Create a function to 'encode' (memorize) the faces
 def findEncodings(images):
 
     encodeList = []
@@ -117,9 +43,7 @@ def findEncodings(images):
 
     return encodeList
 
-
-print("Encoding faces... please wait.")
-
+print("Encoding started... please wait.")
 encodeListKnown = findEncodings(images)
 
 
@@ -137,10 +61,8 @@ if len(encodeListKnown) == 0:
 print("Encoding Complete!")
 
 
-# ==============================
-# 5. START WEBCAM
-# ==============================
 
+# 4. Start the Webcam
 cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
@@ -153,30 +75,11 @@ if not cap.isOpened():
 while True:
 
     success, img = cap.read()
+    # Resize image to 1/4 size for faster processing
+    imgS = cv2.resize(img, (0, 0), None, 0.25, 0.25)
+    imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
 
-    if not success:
-        print("❌ Could not read from webcam.")
-        break
-
-
-    # Resize image for faster processing
-
-    imgS = cv2.resize(
-        img,
-        (0, 0),
-        None,
-        0.25,
-        0.25
-    )
-
-    imgS = cv2.cvtColor(
-        imgS,
-        cv2.COLOR_BGR2RGB
-    )
-
-
-    # Detect faces
-
+    # Find faces in the current webcam frame
     facesCurFrame = face_recognition.face_locations(imgS)
 
     encodesCurFrame = face_recognition.face_encodings(
@@ -210,89 +113,21 @@ while True:
         if matches[matchIndex]:
 
             name = classNames[matchIndex].upper()
-
-            mark_attendance(name)
-
-
-            # Face coordinates
-
+            
+            # Scale face locations back up to original size
             y1, x2, y2, x1 = faceLoc
+            y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
+            
+            # Draw the box and the name
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.rectangle(img, (x1, y2 - 35), (x2, y2), (0, 255, 0), cv2.FILLED)
+            cv2.putText(img, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
 
-            y1 *= 4
-            x2 *= 4
-            y2 *= 4
-            x1 *= 4
-
-
-            # Draw rectangle
-
-            cv2.rectangle(
-                img,
-                (x1, y1),
-                (x2, y2),
-                (0, 255, 0),
-                2
-            )
-
-
-            # Name background
-
-            cv2.rectangle(
-                img,
-                (x1, y2 - 35),
-                (x2, y2),
-                (0, 255, 0),
-                cv2.FILLED
-            )
-
-
-            # Display name
-
-            cv2.putText(
-                img,
-                name,
-                (x1 + 6, y2 - 6),
-                cv2.FONT_HERSHEY_COMPLEX,
-                1,
-                (255, 255, 255),
-                2
-            )
-
-
-    # ==============================
-    # 7. DISPLAY DATE & TIME
-    # ==============================
-
-    now = datetime.now()
-
-    dt_string = now.strftime(
-        "%d/%m/%Y %H:%M:%S"
-    )
-
-    cv2.putText(
-        img,
-        dt_string,
-        (10, 30),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
-        (255, 255, 0),
-        2
-    )
-
-
-    # ==============================
-    # 8. DISPLAY CAMERA
-    # ==============================
-
-    cv2.imshow(
-        "Attendance System",
-        img
-    )
-
-
-    # Press Q to quit
-
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    # Show the webcam window
+    cv2.imshow('Webcam', img)
+    
+    # Press 'q' to stop the program
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 
