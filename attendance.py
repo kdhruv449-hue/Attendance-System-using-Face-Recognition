@@ -5,9 +5,8 @@ import os
 from datetime import datetime
 
 
-# =========================
 # PATHS
-# =========================
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,9 +19,7 @@ if not os.path.exists(training_path):
     os.makedirs(training_path)
 
 
-# =========================
 # LOAD TRAINING IMAGES
-# =========================
 
 image_extensions = (".jpg", ".jpeg", ".png")
 
@@ -54,9 +51,8 @@ for cl in myList:
 print("Encoding started... please wait.")
 
 
-# =========================
+
 # FIND FACE ENCODINGS
-# =========================
 
 def findEncodings(images, classNames):
 
@@ -86,9 +82,7 @@ encodeListKnown, classNames = findEncodings(images, classNames)
 print("Encoding Complete!")
 
 
-# =========================
 # CHECK TRAINING IMAGES
-# =========================
 
 if len(encodeListKnown) == 0:
 
@@ -99,9 +93,7 @@ if len(encodeListKnown) == 0:
     exit()
 
 
-# =========================
 # ATTENDANCE FUNCTION
-# =========================
 
 def markAttendance(name):
 
@@ -140,9 +132,9 @@ def markAttendance(name):
     print(f"✅ Attendance logged for {name.upper()} on {today}")
 
 
-# =========================
+
 # OPEN WEBCAM
-# =========================
+
 
 cap = cv2.VideoCapture(0)
 
@@ -158,9 +150,9 @@ print("\n📷 Camera started.")
 print("Press 'Q' to quit.")
 
 
-# =========================
+
 # FACE RECOGNITION LOOP
-# =========================
+
 
 while True:
 
@@ -263,9 +255,9 @@ while True:
         break
 
 
-# =========================
+
 # CLEANUP
-# =========================
+
 
 cap.release()
 cv2.destroyAllWindows()
